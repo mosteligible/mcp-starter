@@ -42,7 +42,7 @@ def create_mcp_server(
     The server can be customized by passing configuration parameters.
 
     Args:
-        name: The name of the MCP server. Defaults to SERVER_NAME env var or "FastMCP Starter".
+        name: The name of the MCP server. Defaults to SERVER_NAME env var or "MCP Starter Server".
         instructions: Instructions for using the server.
 
     Returns:
