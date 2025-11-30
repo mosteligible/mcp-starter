@@ -9,7 +9,7 @@ A starter template for building MCP (Model Context Protocol) servers using FastM
   - **FastAPI + FastMCP Server**: An HTTP-based server combining FastAPI with FastMCP's http_app
 
 - **Configurable Middleware**:
-  - Built-in authentication middleware with Bearer token support
+  - Built-in authentication middleware base class
   - Easy integration of custom middleware components
   - CORS support for the FastAPI server
 
@@ -27,21 +27,18 @@ A starter template for building MCP (Model Context Protocol) servers using FastM
 git clone https://github.com/mosteligible/mcp-starter.git
 cd mcp-starter
 
-# Install in development mode
-pip install -e ".[dev]"
-```
+# Install dependencies with uv
+uv sync
 
-### Using pip
-
-```bash
-pip install mcp-starter
+# Install with dev dependencies
+uv sync --dev
 ```
 
 ## Quick Start
 
 ### FastMCP Standalone Server
 
-The FastMCP standalone server uses stdio transport for MCP communication:
+The FastMCP standalone server uses configurable transport for MCP communication:
 
 ```python
 from mcp_starter.fastmcp_server import create_mcp_server, run
@@ -62,6 +59,11 @@ run()
 Or run from the command line:
 
 ```bash
+# Default transport (stateless_http)
+mcp-fastmcp
+
+# With SSE transport
+export MCP_TRANSPORT=sse
 mcp-fastmcp
 ```
 
@@ -70,65 +72,50 @@ mcp-fastmcp
 The FastAPI server provides HTTP-based MCP communication with full middleware support:
 
 ```python
-from mcp_starter.fastapi_fastmcp_server import create_app, run
+from mcp_starter.fastapi_fastmcp_server import create_app
 
-# Create app with authentication
-app = create_app(auth_token="your-secret-token")
-
-# Or create app without authentication
+# Create app
 app = create_app()
 
-# Run the server
-run(host="0.0.0.0", port=8000)
+# Or create app with custom settings
+app = create_app(
+    cors_origins=["http://localhost:3000", "https://myapp.com"],
+)
 ```
 
-Or run from the command line:
+Run with uvicorn:
 
 ```bash
-# Without authentication
-mcp-fastapi
-
-# With authentication (using environment variable)
-export AUTH_TOKEN=your-secret-token
-mcp-fastapi
+uvicorn mcp_starter.fastapi_fastmcp_server.main:app --host 0.0.0.0 --port 8000
 ```
 
 ## Configuration
 
 ### Environment Variables
 
+All environment variables are centralized in `mcp_starter.resources.config.Settings`:
+
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `SERVER_NAME` | Name of the MCP server | "FastMCP Starter" / "FastAPI + FastMCP Starter" |
+| `SERVER_NAME` | Name of the MCP server | "MCP Starter Server" |
 | `AUTH_TOKEN` | Authentication token for middleware | None (auth disabled) |
 | `HOST` | Host to bind the FastAPI server | "0.0.0.0" |
 | `PORT` | Port for the FastAPI server | 8000 |
 | `ENVIRONMENT` | Environment name (development/production) | "development" |
 | `DEBUG` | Enable debug mode | "false" |
+| `MCP_TRANSPORT` | Transport mode for FastMCP ("sse" or "stateless_http") | "stateless_http" |
 
 ## Middleware Configuration
 
 ### Authentication Middleware
 
-The built-in authentication middleware supports Bearer token authentication:
+The built-in authentication middleware provides a base class that can be extended:
 
 ```python
-from mcp_starter.fastapi_fastmcp_server import create_app
 from mcp_starter.middleware import AuthMiddleware
 
-# Using the create_app function
-app = create_app(auth_token="secret-token")
-
-# Or add middleware manually
-from fastapi import FastAPI
-app = FastAPI()
-app.add_middleware(
-    AuthMiddleware,
-    token="secret-token",
-    header_name="Authorization",
-    token_prefix="Bearer",
-    exclude_paths=["/health", "/docs"],
-)
+# The middleware is a simple Starlette BaseHTTPMiddleware
+# Override the dispatch method to add custom authentication logic
 ```
 
 ### Custom Middleware
@@ -140,7 +127,6 @@ from mcp_starter.fastapi_fastmcp_server import create_app
 
 # Add custom middleware using the additional_middleware parameter
 app = create_app(
-    auth_token="secret-token",
     additional_middleware=[
         (YourCustomMiddleware, {"param1": "value1"}),
         (AnotherMiddleware, {"setting": True}),
@@ -245,23 +231,23 @@ def my_resource() -> dict:
 
 ```bash
 # Install dev dependencies
-pip install -e ".[dev]"
+uv sync --dev
 
 # Run tests
-pytest
+uv run pytest
 
 # Run tests with coverage
-pytest --cov=mcp_starter
+uv run pytest --cov=mcp_starter
 ```
 
 ### Linting
 
 ```bash
 # Run ruff linter
-ruff check src tests
+uv run ruff check src tests
 
 # Auto-fix issues
-ruff check --fix src tests
+uv run ruff check --fix src tests
 ```
 
 ## Project Structure
@@ -287,7 +273,7 @@ mcp-starter/
 │       │   └── greeting.py
 │       └── resources/               # Sample MCP resources
 │           ├── __init__.py
-│           ├── config.py
+│           ├── config.py            # Centralized settings
 │           └── info.py
 ├── tests/
 │   ├── __init__.py
@@ -298,6 +284,7 @@ mcp-starter/
 │   ├── test_fastmcp_server.py
 │   └── test_fastapi_server.py
 ├── pyproject.toml
+├── uv.lock
 ├── README.md
 └── LICENSE
 ```

@@ -19,13 +19,14 @@ Example usage:
     ```bash
     mcp-fastmcp
     ```
-"""
 
-import os
+Environment Variables:
+    MCP_TRANSPORT: Transport mode - "sse" or "stateless_http" (default: "stateless_http")
+"""
 
 from fastmcp import FastMCP
 
-from mcp_starter.resources.config import get_config
+from mcp_starter.resources.config import get_config, settings
 from mcp_starter.resources.info import get_server_info
 from mcp_starter.tools.calculator import add, divide, multiply, subtract
 from mcp_starter.tools.greeting import greet
@@ -55,7 +56,7 @@ def create_mcp_server(
         )
         ```
     """
-    server_name = name or os.environ.get("SERVER_NAME", "FastMCP Starter")
+    server_name = name or settings.SERVER_NAME
     server_instructions = instructions or "A starter MCP server with sample tools and resources."
 
     mcp = FastMCP(
@@ -93,20 +94,27 @@ mcp = create_mcp_server()
 def run() -> None:
     """Run the FastMCP server.
 
-    This function starts the FastMCP server using the stdio transport,
-    which is the standard transport for MCP communication.
+    This function starts the FastMCP server using the configured transport.
+    The transport mode can be configured via the MCP_TRANSPORT environment variable:
+        - "sse": Server-Sent Events transport
+        - "stateless_http": Stateless HTTP transport (default)
 
     The server can be configured using environment variables:
         - SERVER_NAME: The name of the server
-        - AUTH_TOKEN: The authentication token (if using auth middleware)
+        - MCP_TRANSPORT: Transport mode ("sse" or "stateless_http")
 
     Example:
         ```bash
         export SERVER_NAME="My MCP Server"
+        export MCP_TRANSPORT="stateless_http"
         mcp-fastmcp
         ```
     """
-    mcp.run()
+    transport = settings.MCP_TRANSPORT
+    if transport == "sse":
+        mcp.run(transport="sse")
+    else:
+        mcp.run(transport="streamable-http")
 
 
 if __name__ == "__main__":
