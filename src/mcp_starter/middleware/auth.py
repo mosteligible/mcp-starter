@@ -1,8 +1,10 @@
 """Authentication middleware for MCP servers."""
 
 import os
-from typing import Any, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
+from fastapi import HTTPException
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -115,7 +117,7 @@ async def bearer_token_auth(
     token: str | None = None,
     header_name: str = "Authorization",
     token_prefix: str = "Bearer",
-) -> Callable:
+) -> Callable[[Request], Awaitable[bool]]:
     """Create a bearer token authentication dependency for FastAPI.
 
     This can be used as a FastAPI dependency to validate bearer tokens.
@@ -148,22 +150,16 @@ async def bearer_token_auth(
 
         auth_header = request.headers.get(header_name)
         if not auth_header:
-            from fastapi import HTTPException
-
             raise HTTPException(status_code=401, detail="Missing authentication header")
 
         parts = auth_header.split()
         if len(parts) != 2 or parts[0] != token_prefix:
-            from fastapi import HTTPException
-
             raise HTTPException(
                 status_code=401,
                 detail=f"Invalid authentication header format. Expected: {token_prefix} <token>",
             )
 
         if parts[1] != expected_token:
-            from fastapi import HTTPException
-
             raise HTTPException(status_code=403, detail="Invalid authentication token")
 
         return True
